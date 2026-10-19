@@ -4,19 +4,16 @@ import java.util.ArrayList;
 import java.util.Random;
 import java.io.FileWriter;
 
-/**
- * This class represents a single message that a user wants to send.
- * It also keeps a list of all messages that have been successfully
- * sent during the current run of the program and can save them to JSON.
- */
 public class Message {
 
+    // details for one message
     private String messageId;
     private int messageNumber;
     private String recipient;
     private String messageText;
     private String messageHash;
 
+    // list that stores all the messages that were sent
     private static ArrayList<Message> allMessages = new ArrayList<>();
     private static int totalMessagesSent = 0;
 
@@ -28,10 +25,12 @@ public class Message {
         this.messageHash = createMessageHash();
     }
 
+    // checks that the message id is not longer than 10 characters
     public boolean checkMessageID() {
         return messageId != null && messageId.length() <= 10;
     }
 
+    // checks if the recipient cell number is valid
     public String checkRecipientCell() {
         if (recipient != null && recipient.matches("^\\+27\\d{9}$")) {
             return "Cell phone number successfully captured.";
@@ -39,14 +38,18 @@ public class Message {
         return "Cell phone number is incorrectly formatted or does not contain an international code. Please correct the number and try again.";
     }
 
+    // creates the message hash
     public String createMessageHash() {
         String firstTwo = messageId.substring(0, 2);
         String[] words = messageText.trim().split("\\s+");
+
         String firstWord = words.length > 0 ? words[0] : "";
         String lastWord = words.length > 1 ? words[words.length - 1] : firstWord;
+
         return (firstTwo + ":" + messageNumber + ":" + firstWord + lastWord).toUpperCase();
     }
 
+    // handles send, disregard or store
     public String sentMessage(String choice) {
         if (choice.equals("1") || choice.equalsIgnoreCase("send")) {
             allMessages.add(this);
@@ -62,10 +65,12 @@ public class Message {
         return "Invalid option.";
     }
 
+    // returns all the messages that have been sent
     public static String printMessages() {
         if (allMessages.isEmpty()) {
             return "No messages have been sent yet.";
         }
+
         StringBuilder sb = new StringBuilder();
         for (Message m : allMessages) {
             sb.append("Message ID: ").append(m.messageId).append("\n");
@@ -81,9 +86,7 @@ public class Message {
         return allMessages.size();
     }
 
-    /**
-     * Saves all messages into a JSON file called messages.json
-     */
+    // saves all the messages into a json file
     public static void storeMessagesToJSON() {
         try {
             FileWriter file = new FileWriter("messages.json");
@@ -115,6 +118,7 @@ public class Message {
         }
     }
 
+    // generates a random 10 digit message id
     private String generateMessageId() {
         Random rnd = new Random();
         long number = 1000000000L + (long) (rnd.nextDouble() * 9000000000L);
