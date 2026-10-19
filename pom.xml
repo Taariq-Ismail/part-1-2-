@@ -36,4 +36,5 @@
         <maven.compiler.release>25</maven.compiler.release>
         <exec.mainClass>com.mycompany.part1.Part1</exec.mainClass>
     </properties>
+    <name>part2</name>
 </project>
