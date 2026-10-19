@@ -1,130 +1,86 @@
 package com.mycompany.part1;
 
-import java.util.ArrayList;
-import java.util.Random;
 import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Random;
 
 public class Message {
-
-    // details for one message
     private String messageId;
     private int messageNumber;
     private String recipient;
     private String messageText;
     private String messageHash;
 
-    // list that stores all the messages that were sent
-    private static ArrayList<Message> allMessages = new ArrayList<>();
-    private static int totalMessagesSent = 0;
-
-    public Message(String recipient, String messageText) {
+    public Message(int messageNumber, String recipient, String messageText) {
         this.messageId = generateMessageId();
-        this.messageNumber = ++totalMessagesSent;
+        this.messageNumber = messageNumber;
         this.recipient = recipient;
         this.messageText = messageText;
         this.messageHash = createMessageHash();
     }
 
-    // checks that the message id is not longer than 10 characters
-    public boolean checkMessageID() {
-        return messageId != null && messageId.length() <= 10;
-    }
-
-    // checks if the recipient cell number is valid
-    public String checkRecipientCell() {
-        if (recipient != null && recipient.matches("^\\+27\\d{9}$")) {
-            return "Cell phone number successfully captured.";
-        }
-        return "Cell phone number is incorrectly formatted or does not contain an international code. Please correct the number and try again.";
-    }
-
-    // creates the message hash
-    public String createMessageHash() {
-        String firstTwo = messageId.substring(0, 2);
-        String[] words = messageText.trim().split("\\s+");
-
-        String firstWord = words.length > 0 ? words[0] : "";
-        String lastWord = words.length > 1 ? words[words.length - 1] : firstWord;
-
-        return (firstTwo + ":" + messageNumber + ":" + firstWord + lastWord).toUpperCase();
-    }
-
-    // handles send, disregard or store
-    public String sentMessage(String choice) {
-        if (choice.equals("1") || choice.equalsIgnoreCase("send")) {
-            allMessages.add(this);
-            return "Message successfully sent.";
-        } else if (choice.equals("2") || choice.equalsIgnoreCase("disregard") || choice.equals("0")) {
-            totalMessagesSent--;
-            return "Press 0 to delete message.";
-        } else if (choice.equals("3") || choice.equalsIgnoreCase("store")) {
-            allMessages.add(this);
-            storeMessagesToJSON();
-            return "Message successfully stored.";
-        }
-        return "Invalid option.";
-    }
-
-    // returns all the messages that have been sent
-    public static String printMessages() {
-        if (allMessages.isEmpty()) {
-            return "No messages have been sent yet.";
-        }
-
-        StringBuilder sb = new StringBuilder();
-        for (Message m : allMessages) {
-            sb.append("Message ID: ").append(m.messageId).append("\n");
-            sb.append("Message Hash: ").append(m.messageHash).append("\n");
-            sb.append("Recipient: ").append(m.recipient).append("\n");
-            sb.append("Message: ").append(m.messageText).append("\n");
-            sb.append("-------------------------\n");
-        }
-        return sb.toString();
-    }
-
-    public static int returnTotalMessages() {
-        return allMessages.size();
-    }
-
-    // saves all the messages into a json file
-    public static void storeMessagesToJSON() {
-        try {
-            FileWriter file = new FileWriter("messages.json");
-            file.write("[\n");
-
-            for (int i = 0; i < allMessages.size(); i++) {
-                Message m = allMessages.get(i);
-
-                file.write("  {\n");
-                file.write("    \"messageId\": \"" + m.messageId + "\",\n");
-                file.write("    \"messageHash\": \"" + m.messageHash + "\",\n");
-                file.write("    \"recipient\": \"" + m.recipient + "\",\n");
-                file.write("    \"message\": \"" + m.messageText.replace("\"", "'") + "\"\n");
-                file.write("  }");
-
-                if (i < allMessages.size() - 1) {
-                    file.write(",\n");
-                } else {
-                    file.write("\n");
-                }
-            }
-
-            file.write("]");
-            file.close();
-            System.out.println("Messages successfully stored in messages.json");
-
-        } catch (Exception e) {
-            System.out.println("Error while saving messages to JSON: " + e.getMessage());
-        }
-    }
-
-    // generates a random 10 digit message id
     private String generateMessageId() {
-        Random rnd = new Random();
-        long number = 1000000000L + (long) (rnd.nextDouble() * 9000000000L);
-        return String.valueOf(number);
+        Random rand = new Random();
+        long id = (long) (rand.nextDouble() * 9_000_000_000L) + 1_000_000_000L;
+        return String.valueOf(id);
     }
 
+    // Brief requires Boolean return type
+    public Boolean checkMessageID() {
+        return this.messageId != null && this.messageId.length() <= 10;
+    }
+
+    // Brief requires String return type with exact messages
+    public String checkRecipientCell() {
+        if (this.recipient.startsWith("+") && this.recipient.length() <= 12) {
+            return "Cell phone number successfully captured.";
+        } else {
+            return "Cell phone number is incorrectly formatted or does not contain an international code. Please correct the number and try again.";
+        }
+    }
+
+    // Brief requires String return type with exact messages
+    public String checkMessageLength() {
+        if (this.messageText.length() <= 250) {
+            return "Message ready to send.";
+        } else {
+            int excess = this.messageText.length() - 250;
+            return "Message exceeds 250 characters by " + excess + "; please reduce the size.";
+        }
+    }
+
+    // Exact Hash string manipulation from brief
+    public String createMessageHash() {
+        String firstTwoId = this.messageId.substring(0, 2);
+        String[] words = this.messageText.trim().split("\\s+");
+        
+        if (words.length == 0 || this.messageText.isEmpty()) {
+            return (firstTwoId + ":" + this.messageNumber + ":EMPTY").toUpperCase();
+        }
+
+        String firstWord = words[0];
+        String lastWord = words[words.length - 1];
+
+        return (firstTwoId + ":" + this.messageNumber + ":" + firstWord + lastWord).toUpperCase();
+    }
+
+    // Saves to JSON properly
+    public void storeMessage() {
+        String json = "{\n" +
+                "  \"messageId\": \"" + this.messageId + "\",\n" +
+                "  \"messageNumber\": " + this.messageNumber + ",\n" +
+                "  \"recipient\": \"" + this.recipient + "\",\n" +
+                "  \"messageText\": \"" + this.messageText + "\",\n" +
+                "  \"messageHash\": \"" + this.messageHash + "\"\n" +
+                "}\n";
+        try (FileWriter file = new FileWriter("messages.json", true)) {
+            file.write(json);
+        } catch (IOException e) {
+            System.out.println("Error saving to JSON: " + e.getMessage());
+        }
+    }
+
+    // Getters
     public String getMessageId() { return messageId; }
     public String getMessageHash() { return messageHash; }
     public String getRecipient() { return recipient; }
