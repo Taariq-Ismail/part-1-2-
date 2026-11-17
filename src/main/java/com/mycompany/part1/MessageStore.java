@@ -19,7 +19,7 @@ public final class MessageStore {
         file = path;
     }
 
-    // Escape characters that could break the JSON format
+    // Escape characters that could breaks the JSON format
     private static String escape(String text) {
         return text.replace("\\", "\\\\")
                 .replace("\"", "\\\"")
