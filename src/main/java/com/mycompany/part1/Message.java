@@ -1,7 +1,11 @@
 package com.mycompany.part1;
 
-import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class Message {
@@ -12,17 +16,19 @@ public class Message {
     private String messageHash;
     private String flag; // "Sent", "Stored", "Disregard"
 
+    // Normal constructor (used when user creates a message)
     public Message(int messageNumber, String recipient, String messageText) {
         this.messageId = generateMessageId();
         this.messageNumber = messageNumber;
         this.recipient = recipient;
         this.messageText = messageText;
         this.messageHash = createMessageHash();
-        this.flag = "Sent"; // default
+        this.flag = "Sent";
     }
 
-    // Constructor for loading from JSON / test data
-    public Message(String messageId, int messageNumber, String recipient, String messageText, String messageHash, String flag) {
+    // Constructor used when loading from JSON or test data
+    public Message(String messageId, int messageNumber, String recipient, 
+                   String messageText, String messageHash, String flag) {
         this.messageId = messageId;
         this.messageNumber = messageNumber;
         this.recipient = recipient;
@@ -72,14 +78,51 @@ public class Message {
         return (firstTwoId + ":" + this.messageNumber + ":" + firstWord + lastWord).toUpperCase();
     }
 
-    // Improved: writes a clean JSON object (one per line for easier reading)
+    // Clean JSON writing (proper array format)
     public void storeMessage() {
-        String json = String.format(
-            "{\"messageId\":\"%s\",\"messageNumber\":%d,\"recipient\":\"%s\",\"messageText\":\"%s\",\"messageHash\":\"%s\",\"flag\":\"%s\"}%n",
-            messageId, messageNumber, recipient, messageText.replace("\"", "\\\""), messageHash, flag
-        );
-        try (FileWriter file = new FileWriter("messages.json", true)) {
-            file.write(json);
+        try {
+            Path path = Paths.get("messages.json");
+            List<String> lines = new ArrayList<>();
+
+            if (Files.exists(path)) {
+                lines = Files.readAllLines(path);
+            }
+
+            // Clean up existing file so we can append properly
+            if (!lines.isEmpty() && lines.get(lines.size() - 1).trim().equals("]")) {
+                lines.remove(lines.size() - 1);
+                if (!lines.isEmpty()) {
+                    String last = lines.get(lines.size() - 1).trim();
+                    if (last.endsWith(",")) {
+                        lines.set(lines.size() - 1, last.substring(0, last.length() - 1));
+                    }
+                }
+            } else if (lines.isEmpty()) {
+                lines.add("[");
+            }
+
+            String jsonObject = String.format(
+                "  {\"messageId\":\"%s\",\"messageNumber\":%d,\"recipient\":\"%s\",\"messageText\":\"%s\",\"messageHash\":\"%s\",\"flag\":\"%s\"}",
+                messageId,
+                messageNumber,
+                recipient.replace("\"", "\\\""),
+                messageText.replace("\"", "\\\""),
+                messageHash,
+                flag
+            );
+
+            if (lines.size() > 1) {
+                // Add comma to previous object
+                String prev = lines.get(lines.size() - 1);
+                if (!prev.trim().endsWith(",") && !prev.trim().equals("[")) {
+                    lines.set(lines.size() - 1, prev + ",");
+                }
+            }
+
+            lines.add(jsonObject);
+            lines.add("]");
+
+            Files.write(path, lines);
         } catch (IOException e) {
             System.out.println("Error saving to JSON: " + e.getMessage());
         }
@@ -93,14 +136,16 @@ public class Message {
     public String getMessageText() { return messageText; }
     public String getFlag() { return flag; }
 
-    public void setFlag(String flag) { this.flag = flag; }
+    public void setFlag(String flag) {
+        this.flag = flag;
+    }
 
     @Override
     public String toString() {
-        return "Message ID: " + messageId +
-               "\nHash: " + messageHash +
-               "\nRecipient: " + recipient +
-               "\nMessage: " + messageText +
-               "\nFlag: " + flag;
+        return "Message ID : " + messageId +
+               "\nHash       : " + messageHash +
+               "\nRecipient  : " + recipient +
+               "\nMessage    : " + messageText +
+               "\nFlag       : " + flag;
     }
 }
