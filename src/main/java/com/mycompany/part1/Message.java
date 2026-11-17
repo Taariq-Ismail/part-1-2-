@@ -10,6 +10,7 @@ public class Message {
     private String recipient;
     private String messageText;
     private String messageHash;
+    private String flag; // "Sent", "Stored", "Disregard"
 
     public Message(int messageNumber, String recipient, String messageText) {
         this.messageId = generateMessageId();
@@ -17,6 +18,17 @@ public class Message {
         this.recipient = recipient;
         this.messageText = messageText;
         this.messageHash = createMessageHash();
+        this.flag = "Sent"; // default
+    }
+
+    // Constructor for loading from JSON / test data
+    public Message(String messageId, int messageNumber, String recipient, String messageText, String messageHash, String flag) {
+        this.messageId = messageId;
+        this.messageNumber = messageNumber;
+        this.recipient = recipient;
+        this.messageText = messageText;
+        this.messageHash = messageHash;
+        this.flag = flag;
     }
 
     private String generateMessageId() {
@@ -25,12 +37,10 @@ public class Message {
         return String.valueOf(id);
     }
 
-    // Brief requires Boolean return type
     public Boolean checkMessageID() {
         return this.messageId != null && this.messageId.length() <= 10;
     }
 
-    // Brief requires String return type with exact messages
     public String checkRecipientCell() {
         if (this.recipient.startsWith("+") && this.recipient.length() <= 12) {
             return "Cell phone number successfully captured.";
@@ -39,7 +49,6 @@ public class Message {
         }
     }
 
-    // Brief requires String return type with exact messages
     public String checkMessageLength() {
         if (this.messageText.length() <= 250) {
             return "Message ready to send.";
@@ -49,11 +58,10 @@ public class Message {
         }
     }
 
-    // Exact Hash string manipulation from brief
     public String createMessageHash() {
         String firstTwoId = this.messageId.substring(0, 2);
         String[] words = this.messageText.trim().split("\\s+");
-        
+
         if (words.length == 0 || this.messageText.isEmpty()) {
             return (firstTwoId + ":" + this.messageNumber + ":EMPTY").toUpperCase();
         }
@@ -64,15 +72,12 @@ public class Message {
         return (firstTwoId + ":" + this.messageNumber + ":" + firstWord + lastWord).toUpperCase();
     }
 
-    // Saves to JSON properly
+    // Improved: writes a clean JSON object (one per line for easier reading)
     public void storeMessage() {
-        String json = "{\n" +
-                "  \"messageId\": \"" + this.messageId + "\",\n" +
-                "  \"messageNumber\": " + this.messageNumber + ",\n" +
-                "  \"recipient\": \"" + this.recipient + "\",\n" +
-                "  \"messageText\": \"" + this.messageText + "\",\n" +
-                "  \"messageHash\": \"" + this.messageHash + "\"\n" +
-                "}\n";
+        String json = String.format(
+            "{\"messageId\":\"%s\",\"messageNumber\":%d,\"recipient\":\"%s\",\"messageText\":\"%s\",\"messageHash\":\"%s\",\"flag\":\"%s\"}%n",
+            messageId, messageNumber, recipient, messageText.replace("\"", "\\\""), messageHash, flag
+        );
         try (FileWriter file = new FileWriter("messages.json", true)) {
             file.write(json);
         } catch (IOException e) {
@@ -82,7 +87,20 @@ public class Message {
 
     // Getters
     public String getMessageId() { return messageId; }
+    public int getMessageNumber() { return messageNumber; }
     public String getMessageHash() { return messageHash; }
     public String getRecipient() { return recipient; }
     public String getMessageText() { return messageText; }
+    public String getFlag() { return flag; }
+
+    public void setFlag(String flag) { this.flag = flag; }
+
+    @Override
+    public String toString() {
+        return "Message ID: " + messageId +
+               "\nHash: " + messageHash +
+               "\nRecipient: " + recipient +
+               "\nMessage: " + messageText +
+               "\nFlag: " + flag;
+    }
 }
