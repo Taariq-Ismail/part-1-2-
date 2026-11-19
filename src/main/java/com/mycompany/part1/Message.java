@@ -10,28 +10,35 @@ public class Message {
     private final String recipient;
     private final String messageText;
     private final String messageHash;
-    private String status = "Pending";
+    private String status;
 
-    public Message(int messageNumber, String recipient,
-            String messageText) {
+    // Used when creating a new message
+    public Message(int number, String recipient, String text) {
+        this(String.valueOf(ThreadLocalRandom.current()
+                .nextLong(1_000_000_000L, 10_000_000_000L)),
+                number, recipient, text, null, "Pending");
+    }
 
-        // Give every new message a random 10-digit ID
-        this.messageId = String.valueOf(
-                ThreadLocalRandom.current().nextLong(
-                        1_000_000_000L, 10_000_000_000L));
+    // Also used when restoring messages from the JSON file
+    public Message(String id, int number, String recipient,
+            String text, String hash, String status) {
 
-        this.messageNumber = messageNumber;
+        this.messageId = id;
+        this.messageNumber = number;
         this.recipient = recipient == null ? "" : recipient;
-        this.messageText = messageText == null ? "" : messageText;
-        this.messageHash = createMessageHash();
+        this.messageText = text == null ? "" : text;
+        this.status = status == null ? "Pending" : status;
+        this.messageHash = hash == null
+                ? createMessageHash() : hash;
     }
 
-    // Make sure the generated ID is exactly 10 digits
+    // Check the message ID
     public Boolean checkMessageID() {
-        return messageId.matches("\\d{10}");
+        return messageId != null
+                && messageId.matches("\\d{10}");
     }
 
-    // Validate the recipient's international phone number
+    // Validate the recipient number
     public String checkRecipientCell() {
         if (recipient.matches("\\+[1-9]\\d{1,10}")) {
             return "Cell phone number successfully captured.";
@@ -42,7 +49,7 @@ public class Message {
                 + "Please correct the number and try again.";
     }
 
-    // Messages must contain text and cannot exceed 250 characters
+    // Check the 250-character limit
     public String checkMessageLength() {
         if (messageText.isBlank()) {
             return "Message cannot be empty.";
@@ -57,25 +64,22 @@ public class Message {
         return "Message ready to send.";
     }
 
-    // Create a hash using the ID, message number and first/last words
+    // Hash uses the first two ID digits and first/last words
     public String createMessageHash() {
         String[] words = messageText.trim().split("\\s+");
 
-        String ends = messageText.isBlank()
+        String ending = messageText.isBlank()
                 ? "EMPTY"
                 : words[0] + words[words.length - 1];
 
-        return (messageId.substring(0, 2)
-                + ":" + messageNumber
-                + ":" + ends).toUpperCase();
+        return (messageId.substring(0, 2) + ":"
+                + messageNumber + ":" + ending).toUpperCase();
     }
 
-    // Save the message to our JSON file
     public void storeMessage() {
         MessageStore.append(this);
     }
 
-    // Display all the details for one message
     public String printMessage() {
         return "Message ID: " + messageId
                 + "\nMessage Hash: " + messageHash

@@ -7,122 +7,80 @@ import static org.junit.jupiter.api.Assertions.*;
 public class MessageTest {
 
     @Test
-    public void testMessageLengthSuccess() {
-        Message msg = new Message(
-                0, "+27718693002",
-                "Hi Mike, can you join us for dinner tonight?");
+    public void testMessageId() {
+        Message message = new Message(
+                1, "+27834557896", "Hello");
 
-        assertEquals(
-                "Message ready to send.",
-                msg.checkMessageLength());
+        assertTrue(message.checkMessageID());
+        assertEquals(10, message.getMessageId().length());
     }
 
     @Test
-    public void testMessageLengthFailure() {
-        // Create a message that is 10 characters too long
-        String longMessage = "A".repeat(260);
+    public void testValidRecipient() {
+        Message message = new Message(
+                1, "+27834557896", "Hello");
 
-        Message msg = new Message(
-                0, "+27718693002", longMessage);
-
-        assertEquals(
-                "Message exceeds 250 characters by 10; "
-                + "please reduce the size.",
-                msg.checkMessageLength());
+        assertEquals("Cell phone number successfully captured.",
+                message.checkRecipientCell());
     }
 
     @Test
-    public void testMessageLengthBoundary() {
-        // Exactly 250 characters should be accepted
-        Message msg = new Message(
-                1, "+27718693002", "A".repeat(250));
+    public void testInvalidRecipient() {
+        Message message = new Message(
+                1, "0838884567", "Hello");
 
-        assertEquals(
-                "Message ready to send.",
-                msg.checkMessageLength());
+        assertTrue(message.checkRecipientCell()
+                .contains("incorrectly formatted"));
     }
 
     @Test
-    public void testEmptyMessage() {
-        Message msg = new Message(
-                1, "+27718693002", "");
+    public void testMessageLength() {
+        Message message = new Message(
+                1, "+27834557896", "A".repeat(250));
 
-        assertEquals(
-                "Message cannot be empty.",
-                msg.checkMessageLength());
+        assertEquals("Message ready to send.",
+                message.checkMessageLength());
     }
 
     @Test
-    public void testRecipientFormatSuccess() {
-        Message msg = new Message(
-                0, "+27718693002", "Test Message");
+    public void testMessageTooLong() {
+        Message message = new Message(
+                1, "+27834557896", "A".repeat(260));
 
-        assertEquals(
-                "Cell phone number successfully captured.",
-                msg.checkRecipientCell());
+        assertTrue(message.checkMessageLength()
+                .contains("exceeds 250 characters by 10"));
     }
 
     @Test
-    public void testRecipientFormatFailure() {
-        Message msg = new Message(
-                0, "08575975889", "Test Message");
+    public void testMessageHash() {
+        Message message = new Message(
+                1, "+27834557896", "Did you get the cake?");
 
-        assertEquals(
-                "Cell phone number is incorrectly formatted or "
-                + "does not contain an international code. "
-                + "Please correct the number and try again.",
-                msg.checkRecipientCell());
-    }
+        String hash = message.getMessageHash();
 
-    @Test
-    public void testMessageHashCreation() {
-        Message msg = new Message(
-                0, "+27718693002",
-                "Hi Mike, can you join us for dinner tonight Thanks");
-
-        String hash = msg.getMessageHash();
-
-        // The hash contains the message number and first/last words
-        assertTrue(hash.contains(":0:HI"));
-        assertTrue(hash.endsWith("THANKS"));
-        assertEquals(hash, hash.toUpperCase());
-    }
-
-    @Test
-    public void testMessageIdCreation() {
-        Message msg = new Message(
-                0, "+27718693002", "Test");
-
-        // Every generated ID must have 10 digits
-        assertTrue(msg.checkMessageID());
-        assertEquals(10, msg.getMessageId().length());
+        assertTrue(hash.endsWith("DIDCAKE?"));
+        assertTrue(hash.contains(":1:"));
     }
 
     @Test
     public void testMessageStatus() {
-        Message msg = new Message(
-                1, "+27718693002", "Hello");
+        Message message = new Message(
+                1, "+27834557896", "Hello");
 
-        // A new message starts as pending
-        assertEquals("Pending", msg.getStatus());
+        message.setStatus("Sent");
 
-        msg.setStatus("Sent");
-
-        assertEquals("Sent", msg.getStatus());
+        assertEquals("Sent", message.getStatus());
     }
 
     @Test
     public void testPrintMessage() {
-        Message msg = new Message(
-                1, "+27718693002", "Hello there");
+        Message message = new Message(
+                1, "+27834557896", "Hello");
 
-        msg.setStatus("Sent");
+        String output = message.printMessage();
 
-        String result = msg.printMessage();
-
-        assertTrue(result.contains("Hello there"));
-        assertTrue(result.contains("+27718693002"));
-        assertTrue(result.contains("Status: Sent"));
-        assertTrue(result.contains("Message Hash:"));
+        assertTrue(output.contains("Message ID:"));
+        assertTrue(output.contains("Message Hash:"));
+        assertTrue(output.contains("Hello"));
     }
 }

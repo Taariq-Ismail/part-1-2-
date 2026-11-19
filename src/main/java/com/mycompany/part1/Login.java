@@ -5,94 +5,71 @@ public class Login {
 
     private String username;
     private String password;
-    private String cellPhoneNumber;
     private String firstName;
     private String lastName;
 
-    // Check that the username has an underscore and is not too long
+    // Check the username before allowing registration
     public boolean checkUserName(String username) {
         return username != null
-                && !username.isBlank()
                 && username.length() <= 5
                 && username.contains("_");
     }
 
-    // Check the password requirements
+    // Password needs uppercase, number and special character
     public boolean checkPasswordComplexity(String password) {
         if (password == null || password.length() < 8) {
             return false;
         }
 
-        boolean upper = false;
-        boolean number = false;
-        boolean special = false;
-
-        for (char c : password.toCharArray()) {
-            if (Character.isUpperCase(c)) {
-                upper = true;
-            } else if (Character.isDigit(c)) {
-                number = true;
-            } else if (!Character.isLetterOrDigit(c)) {
-                special = true;
-            }
-        }
-
-        return upper && number && special;
+        return password.matches(".*[A-Z].*")
+                && password.matches(".*[0-9].*")
+                && password.matches(".*[^a-zA-Z0-9].*");
     }
 
-    // Check that the number starts with an international code
-    public boolean checkCellPhoneNumber(String cellPhone) {
-        return cellPhone != null
-                && cellPhone.matches("\\+[1-9]\\d{1,10}");
+    // Check the international cellphone format
+    public boolean checkCellPhoneNumber(String number) {
+        return number != null
+                && number.matches("\\+[1-9]\\d{1,10}");
     }
 
-    // Register the user only when all details are valid
-    public String registerUser(String firstName, String lastName,
-            String username, String password, String cellPhoneNumber) {
+    // Only save the account when all the details are correct
+    public String registerUser(String first, String last,
+            String user, String pass, String phone) {
 
-        if (firstName == null || firstName.isBlank()
-                || lastName == null || lastName.isBlank()) {
+        if (first == null || first.isBlank()
+                || last == null || last.isBlank()) {
             return "First name and last name cannot be empty.";
         }
 
-        if (!checkUserName(username)) {
-            return "Username is not correctly formatted; please ensure "
-                    + "that your username contains an underscore and is "
-                    + "no more than five characters in length.";
+        if (!checkUserName(user)) {
+            return "Username is not correctly formatted.";
         }
 
-        if (!checkPasswordComplexity(password)) {
-            return "Password is not correctly formatted; please ensure "
-                    + "that the password contains at least eight characters, "
-                    + "a capital letter, a number, and a special character.";
+        if (!checkPasswordComplexity(pass)) {
+            return "Password is not correctly formatted.";
         }
 
-        if (!checkCellPhoneNumber(cellPhoneNumber)) {
-            return "Cell phone number incorrectly formatted or does "
-                    + "not contain international code.";
+        if (!checkCellPhoneNumber(phone)) {
+            return "Cell phone number incorrectly formatted.";
         }
 
-        // Save the details after validation
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.username = username;
-        this.password = password;
-        this.cellPhoneNumber = cellPhoneNumber;
+        firstName = first;
+        lastName = last;
+        username = user;
+        password = pass;
 
         return "User successfully registered.";
     }
 
-    // Compare login details with the registered account
-    public boolean loginUser(String enteredUsername, String enteredPassword) {
+    // Compare the entered details to the registered account
+    public boolean loginUser(String user, String pass) {
         return username != null
-                && password != null
-                && username.equals(enteredUsername)
-                && password.equals(enteredPassword);
+                && username.equals(user)
+                && password.equals(pass);
     }
 
-    // Show the correct message after a login attempt
-    public String returnLoginStatus(boolean isLoggedIn) {
-        if (isLoggedIn) {
+    public String returnLoginStatus(boolean loggedIn) {
+        if (loggedIn) {
             return "Welcome " + firstName + ", " + lastName
                     + " it is great to see you again.";
         }

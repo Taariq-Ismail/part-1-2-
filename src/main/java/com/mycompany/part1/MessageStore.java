@@ -1,76 +1,97 @@
 
 package com.mycompany.part1;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 public final class MessageStore {
 
     private static Path file = Path.of("messages.json");
 
-    // This class only contains methods for saving messages
+    private static final Gson gson = new GsonBuilder()
+            .setPrettyPrinting()
+            .create();
+
     private MessageStore() {
     }
 
-    // Allows the test file to use a different save location
+    // Use a separate file when running unit tests
     public static void setFile(Path path) {
         file = path;
     }
 
-    // Escape characters that could breaks the JSON format
-    private static String escape(String text) {
-        return text.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t");
-    }
-
-    // Add a message while keeping the file as a valid JSON array
-    public static synchronized void append(Message message) {
-
-        String object = "  {\n"
-                + "    \"messageId\": \""
-                + escape(message.getMessageId()) + "\",\n"
-                + "    \"messageNumber\": "
-                + message.getMessageNumber() + ",\n"
-                + "    \"recipient\": \""
-                + escape(message.getRecipient()) + "\",\n"
-                + "    \"messageText\": \""
-                + escape(message.getMessageText()) + "\",\n"
-                + "    \"messageHash\": \""
-                + escape(message.getMessageHash()) + "\",\n"
-                + "    \"status\": \""
-                + escape(message.getStatus()) + "\"\n"
-                + "  }";
-
+    // Read the JSON file into an array of messages
+    public static synchronized Message[] readMessages() {
         try {
-            // Start with an empty array if no file exists yet
-            String old = Files.exists(file)
-                    ? Files.readString(
-                            file, StandardCharsets.UTF_8).trim()
-                    : "[]";
-
-            if (!old.startsWith("[") || !old.endsWith("]")) {
-                throw new IOException(
-                        "Existing messages.json is not a JSON array.");
+            if (!Files.exists(file)) {
+                return new Message[0];
             }
 
-            String inner = old.substring(
-                    1, old.length() - 1).trim();
+            String json = Files.readString(
+                    file, StandardCharsets.UTF_8);
 
-            String updated = "[\n"
-                    + (inner.isEmpty() ? "" : inner + ",\n")
-                    + object + "\n]\n";
+            if (json.isBlank()) {
+                return new Message[0];
+            }
+
+            Message[] messages = gson.fromJson(
+                    json, Message[].class);
+
+            if (messages == null) {
+                throw new IllegalStateException(
+                        "JSON must contain a message array.");
+            }
+
+            return messages;
+
+        } catch (IOException | RuntimeException ex) {
+            throw new IllegalStateException(
+                    "Could not read messages: " + ex.getMessage(), ex);
+        }
+    }
+
+    // Save the entire array to the JSON file
+    public static synchronized void saveMessages(Message[] messages) {
+        try {
+            String json = gson.toJson(messages);
 
             Files.writeString(
-                    file, updated, StandardCharsets.UTF_8);
+                    file, json, StandardCharsets.UTF_8);
 
         } catch (IOException ex) {
             throw new IllegalStateException(
-                    "Unable to save message: " + ex.getMessage(), ex);
+                    "Could not save messages: " + ex.getMessage(), ex);
         }
+    }
+
+    // Add one message without losing the existing messages
+    public static synchronized void append(Message message) {
+        ArrayList<Message> messages = new ArrayList<>(
+                Arrays.asList(readMessages()));
+
+        messages.add(message);
+
+        saveMessages(messages.toArray(new Message[0]));
+    }
+
+    // Delete the matching message and update the JSON file
+    public static synchronized boolean deleteByHash(String hash) {
+        ArrayList<Message> messages = new ArrayList<>(
+                Arrays.asList(readMessages()));
+
+        boolean removed = messages.removeIf(
+                message -> message.getMessageHash().equalsIgnoreCase(hash));
+
+        if (removed) {
+            saveMessages(messages.toArray(new Message[0]));
+        }
+
+        return removed;
     }
 }

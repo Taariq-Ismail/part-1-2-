@@ -1,284 +1,305 @@
 
 package com.mycompany.part1;
 
-import java.util.ArrayList;
 import java.util.Scanner;
 
 public class QuickChatApp {
 
+    private static final Scanner input = new Scanner(System.in);
+    private static final MessageManager manager = new MessageManager();
+
     public static void main(String[] args) {
 
-        Scanner input = new Scanner(System.in);
-        Login auth = new Login();
+        Login login = new Login();
 
-        System.out.println("=== QuickChat Registration ===");
+        System.out.println("=== QUICKCHAT REGISTRATION ===");
 
-        // Get the user's name before checking account details
-        String first = readNonEmpty(input, "First name: ");
-        String last = readNonEmpty(input, "Last name: ");
+        String first = readText("First name: ");
+        String last = readText("Last name: ");
 
         String username;
-
-        // Keep asking until the username is valid
         do {
-            System.out.print("Username (max 5 characters, include _): ");
-            username = input.nextLine().trim();
-
-            if (!auth.checkUserName(username)) {
-                System.out.println("Invalid username. "
-                        + "Include an underscore and use at most 5 characters.");
+            username = readText("Username: ");
+            if (!login.checkUserName(username)) {
+                System.out.println("Use an underscore and max 5 characters.");
             }
-
-        } while (!auth.checkUserName(username));
+        } while (!login.checkUserName(username));
 
         String password;
-
-        // An invalid password should not close the application
         do {
-            System.out.print("Password: ");
-            password = input.nextLine();
-
-            if (!auth.checkPasswordComplexity(password)) {
-                System.out.println("Invalid password. Use at least "
-                        + "8 characters, an uppercase letter, "
-                        + "a number and a special character.");
+            password = readText("Password: ");
+            if (!login.checkPasswordComplexity(password)) {
+                System.out.println("Password needs 8 characters, uppercase, "
+                        + "number and special character.");
             }
-
-        } while (!auth.checkPasswordComplexity(password));
+        } while (!login.checkPasswordComplexity(password));
 
         String phone;
-
-        // Ask again if the cellphone number is incorrect
         do {
-            System.out.print("Cell phone (+27...): ");
-            phone = input.nextLine().trim();
-
-            if (!auth.checkCellPhoneNumber(phone)) {
-                System.out.println("Invalid phone number. "
-                        + "Example: +27831234567");
+            phone = readText("Cell number (+27...): ");
+            if (!login.checkCellPhoneNumber(phone)) {
+                System.out.println("Invalid international number.");
             }
+        } while (!login.checkCellPhoneNumber(phone));
 
-        } while (!auth.checkCellPhoneNumber(phone));
-
-        System.out.println(auth.registerUser(
+        System.out.println(login.registerUser(
                 first, last, username, password, phone));
 
-        // Allow the user to retry if their login is incorrect
+        // Keep asking until the correct login details are entered
         boolean loggedIn = false;
 
         while (!loggedIn) {
-            System.out.println("\n=== Login ===");
+            System.out.println("\n=== LOGIN ===");
 
-            System.out.print("Username: ");
-            String enteredUsername = input.nextLine();
+            String user = readText("Username: ");
+            String pass = readText("Password: ");
 
-            System.out.print("Password: ");
-            String enteredPassword = input.nextLine();
-
-            loggedIn = auth.loginUser(
-                    enteredUsername, enteredPassword);
-
-            System.out.println(auth.returnLoginStatus(loggedIn));
+            loggedIn = login.loginUser(user, pass);
+            System.out.println(login.returnLoginStatus(loggedIn));
         }
 
-        System.out.println("\nWelcome to QuickChat.");
+        // Load any stored messages from previous runs
+        try {
+            manager.loadStoredMessages();
+        } catch (IllegalStateException ex) {
+            System.out.println("Stored messages could not be loaded: "
+                    + ex.getMessage());
+            System.out.println("Fix the JSON file before continuing.");
+            return;
+        }
 
-        // Keep separate lists for the different message statuses
-        ArrayList<Message> sent = new ArrayList<>();
-        ArrayList<Message> stored = new ArrayList<>();
-        ArrayList<Message> disregarded = new ArrayList<>();
+        System.out.println("\nWelcome to QuickChat!");
 
-        int nextNumber = 1;
+        int nextNumber = manager.getMessageIds().length + 1;
 
-        // The main menu stays open until the user chooses Quit
+        // Main menu runs until the user chooses Quit
         while (true) {
-            System.out.println("\n=== QuickChat Menu ===");
+            System.out.println("\n=== MAIN MENU ===");
             System.out.println("1. Send Messages");
-            System.out.println("2. Show recently sent messages");
+            System.out.println("2. Show Recently Sent Messages");
             System.out.println("3. Quit");
-            System.out.print("Choose an option: ");
+            System.out.println("4. Stored Messages");
 
-            String choice = input.nextLine().trim();
+            String option = readText("Choose: ");
 
-            switch (choice) {
-
-                case "1": {
-                    int count = readPositiveInt(
-                            input, "How many messages? ");
+            switch (option) {
+                case "1":
+                    int count = readPositiveInt("How many messages? ");
 
                     for (int i = 0; i < count; i++) {
-                        System.out.println("\nMessage "
-                                + (i + 1) + " of " + count);
-
-                        String recipient;
-
-                        // The recipient must have a valid international number
-                        do {
-                            System.out.print("Recipient (+country code): ");
-                            recipient = input.nextLine().trim();
-
-                            if (!auth.checkCellPhoneNumber(recipient)) {
-                                System.out.println(
-                                        "Invalid recipient number. Try again.");
-                            }
-
-                        } while (!auth.checkCellPhoneNumber(recipient));
-
-                        String body;
-
-                        // Prevent empty or overly long messages
-                        do {
-                            System.out.print("Message (1-250 characters): ");
-                            body = input.nextLine();
-
-                            if (body.isBlank()) {
-                                System.out.println("Message cannot be empty.");
-                            } else if (body.length() > 250) {
-                                System.out.println(
-                                        "Message exceeds 250 characters by "
-                                        + (body.length() - 250) + ".");
-                            }
-
-                        } while (body.isBlank() || body.length() > 250);
-
-                        Message message = new Message(
-                                nextNumber, recipient, body);
-
-                        String action;
-
-                        // Let the user decide what happens to the message
-                        do {
-                            System.out.println("\n1. Send");
-                            System.out.println("2. Disregard");
-                            System.out.println("3. Store for later");
-                            System.out.print("Choose: ");
-
-                            action = input.nextLine().trim();
-
-                            if (!action.equals("1")
-                                    && !action.equals("2")
-                                    && !action.equals("3")) {
-                                System.out.println("Choose 1, 2 or 3.");
-                            }
-
-                        } while (!action.equals("1")
-                                && !action.equals("2")
-                                && !action.equals("3"));
-
-                        if (action.equals("2")) {
-                            message.setStatus("Disregarded");
-                            disregarded.add(message);
-                            System.out.println("Message disregarded.");
-
-                        } else {
-                            if (action.equals("1")) {
-                                message.setStatus("Sent");
-                            } else {
-                                message.setStatus("Stored");
-                            }
-
-                            // Save sent and stored messages to JSON
-                            try {
-                                message.storeMessage();
-
-                                if (action.equals("1")) {
-                                    sent.add(message);
-                                    System.out.println(
-                                            "Message successfully sent.");
-                                    System.out.println(
-                                            message.printMessage());
-                                } else {
-                                    stored.add(message);
-                                    System.out.println(
-                                            "Message stored for later.");
-                                }
-
-                            } catch (IllegalStateException ex) {
-                                System.out.println(
-                                        "Could not save message: "
-                                        + ex.getMessage());
-                            }
-                        }
-
-                        nextNumber++;
+                        sendMessage(nextNumber++);
                     }
-
                     break;
-                }
 
                 case "2":
-                    // Show only messages that were marked as sent
-                    if (sent.isEmpty()) {
+                    Message[] sent = manager.getSentMessages();
+
+                    if (sent.length == 0) {
                         System.out.println("No messages sent yet.");
                     } else {
-                        System.out.println("\n=== Recently Sent Messages ===");
-
                         for (Message message : sent) {
-                            System.out.println();
                             System.out.println(message.printMessage());
+                            System.out.println();
                         }
                     }
                     break;
 
                 case "3":
-                    // Display the totals before closing QuickChat
-                    System.out.println("\n=== Message Summary ===");
-                    System.out.println("Total messages sent: "
-                            + sent.size());
-                    System.out.println("Total messages stored: "
-                            + stored.size());
-                    System.out.println("Total messages disregarded: "
-                            + disregarded.size());
                     System.out.println("Goodbye!");
                     return;
 
+                case "4":
+                    storedMessagesMenu(phone);
+                    break;
+
                 default:
-                    System.out.println(
-                            "Invalid option. Select 1, 2 or 3.");
+                    System.out.println("Invalid option. Try again.");
             }
         }
     }
 
-    // Used for fields that should not be left blank
-    private static String readNonEmpty(
-            Scanner input, String prompt) {
-
-        String value;
+    // Create a message and let the user choose its status
+    private static void sendMessage(int number) {
+        String recipient;
 
         do {
-            System.out.print(prompt);
-            value = input.nextLine().trim();
+            recipient = readText("Recipient (+country code): ");
 
-            if (value.isEmpty()) {
-                System.out.println("This field cannot be empty.");
+            if (!recipient.matches("\\+[1-9]\\d{1,10}")) {
+                System.out.println("Invalid recipient number.");
             }
 
-        } while (value.isEmpty());
+        } while (!recipient.matches("\\+[1-9]\\d{1,10}"));
 
-        return value;
-    }
+        String text;
 
-    // Read a positive number without crashing on letters or symbols
-    private static int readPositiveInt(
-            Scanner input, String prompt) {
+        do {
+            text = readText("Message: ");
+
+            if (text.length() > 250) {
+                System.out.println("Message is too long by "
+                        + (text.length() - 250) + " characters.");
+            }
+
+        } while (text.length() > 250);
+
+        Message message = new Message(number, recipient, text);
 
         while (true) {
+            System.out.println("\n1. Send");
+            System.out.println("2. Disregard");
+            System.out.println("3. Store for later");
+
+            String action = readText("Choose: ");
+
+            switch (action) {
+                case "1":
+                    message.setStatus("Sent");
+                    manager.addMessage(message);
+                    System.out.println("Message successfully sent.");
+                    System.out.println(message.printMessage());
+                    return;
+
+                case "2":
+                    message.setStatus("Disregarded");
+                    manager.addMessage(message);
+                    System.out.println("Message disregarded.");
+                    return;
+
+                case "3":
+                    message.setStatus("Stored");
+
+                    try {
+                        message.storeMessage();
+                        manager.addMessage(message);
+                        System.out.println("Message stored successfully.");
+                    } catch (IllegalStateException ex) {
+                        System.out.println("Save failed: " + ex.getMessage());
+                    }
+                    return;
+
+                default:
+                    System.out.println("Choose 1, 2 or 3.");
+            }
+        }
+    }
+
+    // All six features required for the Part 3 stored message menu
+    private static void storedMessagesMenu(String sender) {
+        while (true) {
+            System.out.println("\n=== STORED MESSAGES ===");
+            System.out.println("1. Display Senders and Recipients");
+            System.out.println("2. Display Longest Message");
+            System.out.println("3. Search by Message ID");
+            System.out.println("4. Search by Recipient");
+            System.out.println("5. Delete by Message Hash");
+            System.out.println("6. Display Message Report");
+            System.out.println("7. Back to Main Menu");
+
+            String option = readText("Choose: ");
+
+            switch (option) {
+                case "1":
+                    System.out.println(
+                            manager.displayStoredRecipients(sender));
+                    break;
+
+                case "2":
+                    Message longest = manager.getLongestMessage();
+
+                    if (longest == null) {
+                        System.out.println("No messages available.");
+                    } else {
+                        System.out.println("Longest message:");
+                        System.out.println(longest.getMessageText());
+                    }
+                    break;
+
+                case "3":
+                    String id = readText("Enter Message ID: ");
+                    Message found = manager.searchById(id);
+
+                    if (found == null) {
+                        System.out.println("Message not found.");
+                    } else {
+                        System.out.println("Recipient: "
+                                + found.getRecipient());
+                        System.out.println("Message: "
+                                + found.getMessageText());
+                    }
+                    break;
+
+                case "4":
+                    String recipient = readText("Enter recipient: ");
+                    Message[] matches = manager.searchByRecipient(recipient);
+
+                    if (matches.length == 0) {
+                        System.out.println("No messages found.");
+                    } else {
+                        for (Message message : matches) {
+                            System.out.println(message.printMessage());
+                            System.out.println();
+                        }
+                    }
+                    break;
+
+                case "5":
+                    String hash = readText("Enter message hash: ");
+
+                    try {
+                        if (manager.deleteByHash(hash)) {
+                            System.out.println(
+                                    "Message successfully deleted.");
+                        } else {
+                            System.out.println("Message hash not found.");
+                        }
+                    } catch (IllegalStateException ex) {
+                        System.out.println("Delete failed: "
+                                + ex.getMessage());
+                    }
+                    break;
+
+                case "6":
+                    System.out.println(manager.displayReport());
+                    break;
+
+                case "7":
+                    return;
+
+                default:
+                    System.out.println("Invalid option.");
+            }
+        }
+    }
+
+    // Prevent blank input from being accepted
+    private static String readText(String prompt) {
+        while (true) {
             System.out.print(prompt);
+            String value = input.nextLine().trim();
 
-            try {
-                int number = Integer.parseInt(
-                        input.nextLine().trim());
-
-                if (number > 0) {
-                    return number;
-                }
-
-            } catch (NumberFormatException ex) {
-                // Invalid input is handled by the message below
+            if (!value.isEmpty()) {
+                return value;
             }
 
-            System.out.println(
-                    "Enter a positive whole number.");
+            System.out.println("This field cannot be empty.");
+        }
+    }
+
+    // Avoid crashing when the user types letters instead of a number
+    private static int readPositiveInt(String prompt) {
+        while (true) {
+            try {
+                int value = Integer.parseInt(readText(prompt));
+
+                if (value > 0) {
+                    return value;
+                }
+            } catch (NumberFormatException ex) {
+                // The message below handles invalid input
+            }
+
+            System.out.println("Enter a positive whole number.");
         }
     }
 }
